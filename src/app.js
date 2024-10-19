@@ -1,17 +1,16 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const itemRoutes = require('./routes/itemRoutes');
-const config = require('./config/database');
+const sequelize = require('./models/index');
 
 const app = express();
 
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-// Connect to MongoDB
-mongoose.connect(config.mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('Could not connect to MongoDB', err));
+// Sync all models with database
+sequelize.sync({ force: false })
+  .then(() => console.log('Database synced'))
+  .catch(err => console.error('Error syncing database:', err));
 
 // Use routes
 app.use('/api/items', itemRoutes);
@@ -20,6 +19,11 @@ app.use('/api/items', itemRoutes);
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).send('Something went wrong!');
+});
+
+const port = process.env.PORT || 4000;
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
 });
 
 module.exports = app;
