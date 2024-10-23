@@ -1,5 +1,14 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Infrastructure stack including ECR repository'
+Description: 'CloudFormation template for creating infrastructure including Secrets Manager'
+
+Parameters:
+  DBUsername:
+    Type: String
+    Description: Database username
+  DBPassword:
+    Type: String
+    Description: Database password
+    NoEcho: true
 
 Resources:
   # Existing resources...
@@ -13,6 +22,45 @@ Resources:
       ImageScanningConfiguration:
         ScanOnPush: true
 
+  # Secrets Manager Secret
+  DatabaseSecret:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: 'your-app-db-secret'
+      Description: 'Database credentials for your-app'
+      SecretString: 
+        !Join 
+          - ''
+          - - '{"username":"'
+            - !Ref DBUsername
+            - '","password":"'
+            - !Ref DBPassword
+            - '"}'
+
+  # IAM Role for EKS nodes to access Secrets Manager
+  EKSNodeRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy'
+        - 'arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy'
+        - 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'
+      Policies:
+        - PolicyName: SecretsManagerAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: 'secretsmanager:GetSecretValue'
+                Resource: !Ref DatabaseSecret
+
 Outputs:
   # Existing outputs...
 
@@ -21,3 +69,10 @@ Outputs:
     Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepository}
     Export:
       Name: !Sub ${AWS::StackName}-ECRRepositoryUri
+
+  SecretARN:
+    Description: 'ARN of the created secret'
+    Value: !Ref DatabaseSecret
+  EKSNodeRoleARN:
+    Description: 'ARN of the EKS Node Role'
+    Value: !GetAtt EKSNodeRole.Arn

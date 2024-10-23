@@ -24,16 +24,8 @@ spec:
           value: "3000"
         - name: NODE_ENV
           value: "production"
-        - name: DB_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: db-secrets
-              key: username
         - name: DB_SECRET_ARN
-          valueFrom:
-            secretKeyRef:
-              name: db-secrets
-              key: secret-arn
+          value: ${DB_SECRET_ARN}
         - name: DB_NAME
           valueFrom:
             configMapKeyRef:

@@ -17,8 +17,6 @@ services:
       - DB_USERNAME=postgres
       - DB_PASSWORD=postgres
       - DB_NAME=your_local_db_name
-    env_file:
-      - .env
     volumes:
       - ./src:/app/src
       - ./node_modules:/app/node_modules

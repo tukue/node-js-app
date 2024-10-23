@@ -1,8 +1,28 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'Infrastructure and Pipeline stack including ECR repository'
+Description: 'CloudFormation template for creating infrastructure and CI/CD pipeline'
 
 Parameters:
-  # Add any existing parameters here
+  GitHubOwner:
+    Type: String
+    Description: GitHub repository owner
+  GitHubRepo:
+    Type: String
+    Description: GitHub repository name
+  GitHubBranch:
+    Type: String
+    Description: GitHub branch name
+    Default: main
+  GitHubToken:
+    Type: String
+    Description: GitHub personal access token
+    NoEcho: true
+  DBUsername:
+    Type: String
+    Description: Database username
+  DBPassword:
+    Type: String
+    Description: Database password
+    NoEcho: true
 
 Resources:
   # ECR Repository
@@ -46,7 +66,7 @@ Resources:
                 Version: 1
                 Provider: CodeCommit
               Configuration:
-                RepositoryName: your-repo-name
+                RepositoryName: node-js-app
                 BranchName: main
               OutputArtifacts:
                 - Name: SourceOutput
@@ -65,6 +85,21 @@ Resources:
               InputArtifacts:
                 - Name: SourceOutput
               RunOrder: 1
+
+  # Secrets Manager Secret
+  DatabaseSecret:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: !Sub '${AWS::StackName}-db-secret'
+      Description: 'Database credentials for the application'
+      SecretString: 
+        !Join 
+          - ''
+          - - '{"username":"'
+            - !Ref DBUsername
+            - '","password":"'
+            - !Ref DBPassword
+            - '"}'
 
   CodeBuildProject:
     Type: AWS::CodeBuild::Project
@@ -86,6 +121,8 @@ Resources:
             Value: !Ref ECRRepository
           - Name: IMAGE_TAG
             Value: latest
+          - Name: DB_SECRET_ARN
+            Value: !Ref DatabaseSecret
       Source:
         Type: CODEPIPELINE
         BuildSpec: buildspec.yml
@@ -135,6 +172,13 @@ Resources:
                   - ecr:CompleteLayerUpload
                   - ecr:PutImage
                 Resource: !GetAtt ECRRepository.Arn
+        - PolicyName: SecretsManagerAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: 'secretsmanager:GetSecretValue'
+                Resource: !Ref DatabaseSecret
 
 Outputs:
   ClusterName:
@@ -148,5 +192,8 @@ Outputs:
     Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ECRRepository}
     Export:
       Name: !Sub ${AWS::StackName}-ECRRepositoryUri
+  SecretARN:
+    Description: 'ARN of the created secret'
+    Value: !Ref DatabaseSecret
 
   # Add other relevant outputs here
