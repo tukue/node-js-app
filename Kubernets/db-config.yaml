@@ -1,1 +1,8 @@
- 
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-config
+data:
+  db-name: your_aws_db_name
+  db-host: your_aws_db_host.rds.amazonaws.com
+  db-port: "5432"

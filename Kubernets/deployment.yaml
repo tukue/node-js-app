@@ -29,11 +29,11 @@ spec:
             secretKeyRef:
               name: db-secrets
               key: username
-        - name: DB_PASSWORD
+        - name: DB_SECRET_ARN
           valueFrom:
             secretKeyRef:
               name: db-secrets
-              key: password
+              key: secret-arn
         - name: DB_NAME
           valueFrom:
             configMapKeyRef:
@@ -49,9 +49,11 @@ spec:
             configMapKeyRef:
               name: db-config
               key: db-port
+        - name: AWS_REGION
+          value: ${AWS_DEFAULT_REGION}
         readinessProbe:
           httpGet:
-            path: /health
+            path: /ready
             port: 3000
           initialDelaySeconds: 10
           periodSeconds: 15
